@@ -1,0 +1,2 @@
+# TeamFreddy
+Repo para metodologías
