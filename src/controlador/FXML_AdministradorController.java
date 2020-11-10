@@ -13,11 +13,15 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.Pane;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import modelo.Farmacia_DAO_Imp;
 import modelo.Farmacia_VO;
@@ -26,6 +30,7 @@ public class FXML_AdministradorController implements Initializable {
     private Farmacia_DAO_Imp farmacia_DAO;
     private ObservableList<Farmacia_VO> lista_de_Farmacias;
     private Stage stage_Principal;
+    private FXML_EditarFarmaciaController controlador;
     
     @FXML
     private JFXButton boton_Farmacias;
@@ -42,8 +47,6 @@ public class FXML_AdministradorController implements Initializable {
     @FXML
     private Pane panel_Repartidores;
     @FXML
-    private Button btn_Mostrar;
-    @FXML
     private JFXTextField txt_busqueda;
     @FXML
     private TableView<Farmacia_VO> tabla_Farmacias;
@@ -59,9 +62,39 @@ public class FXML_AdministradorController implements Initializable {
     private TableColumn<Farmacia_VO, String> colF_Cp;
     @FXML
     private TableColumn<Farmacia_VO, String> colF_Telefono;
+    @FXML
+    private Button btn_Agregar;
     
     public void setStagePrincipal(Stage principalStage){
         this.stage_Principal = principalStage;
+    }
+    
+    public void setControlador(FXML_EditarFarmaciaController controller){
+        this.controlador = controller;
+    }
+    
+    public boolean mostrarEdicion(Farmacia_VO farmacia){
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/vista/FXML_EditarFarmacia.fxml"));
+            Parent dialogoEditar = (Parent) loader.load();
+            Stage dialogoStage = new Stage();
+            dialogoStage.setTitle("Farmacia");
+            dialogoStage.initModality(Modality.WINDOW_MODAL);
+            dialogoStage.initOwner(stage_Principal);
+            Scene scene = new Scene(dialogoEditar);
+            dialogoStage.setScene(scene);
+            
+            FXML_EditarFarmaciaController controlador = loader.getController();
+            controlador.setStageEdicion(dialogoStage);
+            this.setControlador(controlador);
+            controlador.setFarmacia(farmacia);
+            dialogoStage.showAndWait();
+            return controlador.getEdicion();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
     
     public void obtenerFarmacias(){
@@ -89,36 +122,39 @@ public class FXML_AdministradorController implements Initializable {
     }
     
     @FXML
-    void mostrar(ActionEvent event) {
-        try {
-            Farmacia_VO farmacia = this.farmacia_DAO.read(this.txt_busqueda.getText());
-            this.lista_de_Farmacias.clear();
-            this.lista_de_Farmacias.add(farmacia);
-            this.colocarTablaFarmacias();
-            //this.tabla_Farmacias.getSelectionModel().select(farmacia);
-        } catch (Exception ex) {
-            Logger.getLogger(FXML_AdministradorController.class.getName()).log(Level.SEVERE, null, ex);
+    private void agregar(ActionEvent event) {
+        Farmacia_VO farmacia = new Farmacia_VO();
+        boolean esEdicion = this.mostrarEdicion(farmacia);
+        if(esEdicion){
+            try{
+                this.farmacia_DAO.create(farmacia);
+            } catch(Exception e){
+                System.out.println("Fallo en agregar");
+            }
+        this.obtenerFarmacias();
+        this.colocarTablaFarmacias();
+        this.tabla_Farmacias.getSelectionModel().selectLast();
         }
     }
     
     @FXML
     void borrar(ActionEvent event) {
         int selectedIndex = this.tabla_Farmacias.getSelectionModel().getSelectedIndex();
-            if (selectedIndex >= 0) {
-                Farmacia_VO farmacia = this.tabla_Farmacias.getSelectionModel().getSelectedItem();
-                this.tabla_Farmacias.getSelectionModel().selectLast();
-                try {
-                    this.farmacia_DAO.delete(farmacia);
-                    this.obtenerFarmacias();
-                    this.colocarTablaFarmacias();
-                } catch (Exception e) {
-                    System.out.println("Error al eliminar");
-                }
+        if (selectedIndex >= 0) {
+            Farmacia_VO farmacia = this.tabla_Farmacias.getSelectionModel().getSelectedItem();
+            this.tabla_Farmacias.getSelectionModel().selectLast();
+            try {
+                this.farmacia_DAO.delete(farmacia);
+                this.obtenerFarmacias();
                 this.colocarTablaFarmacias();
-                if (selectedIndex != 0) {
-                    selectedIndex--;
-                    this.tabla_Farmacias.getSelectionModel().select(selectedIndex);
-                }
+            } catch (Exception e) {
+                System.out.println("Error al eliminar");
+            }
+            this.colocarTablaFarmacias();
+            if (selectedIndex != 0) {
+                selectedIndex--;
+                this.tabla_Farmacias.getSelectionModel().select(selectedIndex);
+            }
         }
     }
     
